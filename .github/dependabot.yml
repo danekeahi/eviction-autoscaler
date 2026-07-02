@@ -1,17 +1,9 @@
 # Dependabot configuration for Azure/eviction-autoscaler
-# Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
-#
-# This file enables Dependabot VERSION updates (scheduled hygiene bumps that keep
-# dependencies current). CVE-driven SECURITY updates are enabled separately in
-# repo Settings > Code security, are driven by Dependabot alerts, and arrive as
-# soon as an advisory is published regardless of the schedule below.
 version: 2
 
 updates:
-  # --- Go modules (go.mod / go.sum) ----------------------------------------
-  # Primary surface for dependency CVEs in this project.
   - package-ecosystem: "gomod"
-    directory: "/"                 # go.mod / go.sum live at the repo root
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -19,16 +11,20 @@ updates:
     commit-message:
       prefix: "go"
     groups:
-      # Kubernetes libraries are version-locked to one another and must be
-      # bumped together (e.g. every k8s.io/* moves to v0.36.0 at the same time).
-      # Grouping them into a single PR prevents inconsistent, build-breaking bumps.
+      # k8s.io/* and sigs.k8s.io/* are version-locked to one another and must be
+      # bumped together; grouping them prevents inconsistent, build-breaking bumps.
       kubernetes:
+        applies-to: version-updates
         patterns:
           - "k8s.io/*"
           - "sigs.k8s.io/*"
-      # Everything else: bundle routine minor + patch bumps into one PR to reduce
-      # review noise and CI runs. Major bumps fall outside this group and are
-      # raised as individual PRs so breaking changes get focused review.
+      # Separate group so CVE security updates stay bundled too; without it they
+      # open one-PR-per-dependency and break the version lock.
+      kubernetes-security:
+        applies-to: security-updates
+        patterns:
+          - "k8s.io/*"
+          - "sigs.k8s.io/*"
       go-minor-and-patch:
         patterns:
           - "*"
@@ -36,12 +32,8 @@ updates:
           - "minor"
           - "patch"
 
-  # --- Docker base images (Dockerfile) -------------------------------------
-  # Watches the FROM tags: the Microsoft FIPS Go builder and the Azure Linux
-  # distroless base. Managed DALEC rebuilds the OS layer downstream, so this
-  # ecosystem mainly catches major/minor base-image version bumps.
   - package-ecosystem: "docker"
-    directory: "/"                 # Dockerfile is at the repo root
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -52,11 +44,8 @@ updates:
         patterns:
           - "*"
 
-  # --- GitHub Actions (.github/workflows/*) --------------------------------
-  # Keeps action versions current (e.g. actions/checkout). Supports the
-  # supply-chain hardening that the existing Scorecard workflow encourages.
   - package-ecosystem: "github-actions"
-    directory: "/"                 # "/" maps to .github/workflows for this ecosystem
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
